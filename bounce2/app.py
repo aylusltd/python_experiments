@@ -5,6 +5,25 @@ from point import point
 import constants
 
 class Application(Frame):
+    def bounds_check(self):
+        w = constants.bounds["x"][1]-4
+        h = constants.bounds["y"][1]-4
+        for ball in self.balls:
+            b = ball.representation
+            p = self.canvas.coords(b)
+            if p[3] >= h:
+                ball.direction.y = -1
+                self.canvas.move(b, 0, -(p[3]-h))
+            elif p[1] <= 0:
+                ball.direction.y = 1
+                self.canvas.move(b, 0, -p[1])
+            if p[2] >= w:
+                ball.direction.x = -1
+                self.canvas.move(b, -(p[2]-(w)), 0)
+            elif p[0] <= 0:
+                ball.direction.x = 1
+                self.canvas.move(b, -p[0], 0)
+
     def animate(self):
         w = constants.bounds["x"][1]
         h = constants.bounds["y"][1]
@@ -19,19 +38,8 @@ class Application(Frame):
                     if ball.speed[d] < 0:
                         ball.speed[d] = 0
 
-            if p[3] >= h:
-                ball.direction.y = -1
-                self.canvas.move(b, 0, -(p[3]-h))
-            elif p[1] <= 0:
-                ball.direction.y = 1
-                self.canvas.move(b, 0, -p[1])
-            if p[2] >= w:
-                ball.direction.x = -1
-                self.canvas.move(b, -(p[2]-(w)), 0)
-            elif p[0] <= 0:
-                ball.direction.x = 1
-                self.canvas.move(b, -p[0], 0)
-
+            
+            self.bounds_check()
             if not ball.frozen:
                 # Apply Drag
                 for d in ['x', 'y']:
@@ -141,8 +149,20 @@ class Application(Frame):
                     ball.moved = True
             ball.prev_pos = point(event.x, event.y)
 
+    def configure(self, event):
+        w,h = event.width, event.height
+        constants.bounds["x"][1] = w
+        constants.bounds["y"][1] = h
+        self.bounds_check()
+
+    def make_balls_bigger(self,event=None):
+        print "Todo"
+
+    def make_balls_smaller(self,event=None):
+        print "Shrink 'em"
 
     def createWidgets(self):
+        global root
         self.frame = Frame(root)
         self.frame.pack(fill=BOTH, expand=1)
         self.canvas=Canvas(self.frame, height=constants.bounds["y"][1]+10, width=constants.bounds["x"][1]+10)
@@ -154,6 +174,16 @@ class Application(Frame):
             self.balls.append(ball(self.canvas, cx=i*100, vx=i*10))
         self.canvas.pack(fill=BOTH, expand=1)
         # self.animate()
+        self.canvas.bind("<Configure>", self.configure)
+        self.canvas.focus_set()
+        self.canvas.bind("<Mod1-equal>", self.make_balls_bigger)
+        self.canvas.bind("<Mod1-minus>", self.make_balls_smaller)
+        menubar = Menu(root)
+        filemenu = Menu(menubar, tearoff=0)
+        filemenu.add_command(label="Bigger", command=self.make_balls_bigger)
+        filemenu.add_command(label="Smaller", command=self.make_balls_smaller)
+        menubar.add_cascade(label="Size", menu=filemenu)
+        root.config(menu=menubar)
 
     def __init__(self, master=None):
         Frame.__init__(self, master)

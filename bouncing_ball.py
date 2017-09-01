@@ -104,7 +104,7 @@ class Application(Frame):
             pos = self.canvas.coords(ball.ball)
             ball.props["v"]["x"]
 
-    def make_ball_bigger(self):
+    def make_ball_bigger(self, event=None):
         b = self.balls[0]["ball"]
         c = self.canvas
         p = c.coords(b)
@@ -114,7 +114,7 @@ class Application(Frame):
             p[1]-=10
         c.coords(b, p[0], p[1], p[2], p[3])
 
-    def make_ball_smaller(self):
+    def make_ball_smaller(self, event=None):
         b = self.balls[0]["ball"]
         c = self.canvas
         p = c.coords(b)
@@ -141,9 +141,8 @@ class Application(Frame):
         self.canvas.pack(fill=BOTH, expand=1)
         self.canvas.bind("<Configure>", self.configure)
         self.canvas.focus_set()
-        self.canvas.bind("<KeyPress>", self.keypress)
-        # self.canvas.bind("<Mod1-equal>", self.keyp)
-        # self.canvas.bind("<Control-Key-minus>", self.make_ball_smaller)
+        self.canvas.bind("<Mod1-equal>", self.make_ball_bigger)
+        self.canvas.bind("<Mod1-minus>", self.make_ball_smaller)
         menubar = Menu(root)
         filemenu = Menu(menubar, tearoff=0)
         filemenu.add_command(label="Bigger", command=self.make_ball_bigger)
