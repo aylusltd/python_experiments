@@ -1,11 +1,16 @@
+#!/usr/bin/python
 from Tkinter import *
 from PIL import Image, ImageTk
 import constants
 import sprites
 import string
+from keyhandlers import on_keypress
+import craft
 
 class Application(Frame):
+    g=constants.grid_size
     selected_square=None
+    spears = []
     def make_water(self):
         s=self.selected_square
         s.passable=False
@@ -41,71 +46,103 @@ class Application(Frame):
             self.popup.grab_release()
 
     def keypress(self, event):
-        h = constants.bounds["y"][1]
-        w = constants.bounds["x"][1]
+        on_keypress(self,event)
+
+    def monsters_move(self):
         g = constants.grid_size
+        # c=0
 
-        # for d in event.__dict__.keys():
-        #     print d
-        # print event.keycode
+        for monster in self.screen.monsters:
+            # c+=1
+            # print "Moving monster "+ str(c)
+            not_moved = True
+            d_y = monster.row - self.tux.row
+            d_x = monster.column - self.tux.column
+            grid = self.screen.grid
+            if abs(d_x) < abs(d_y):
+                if d_y < 0:
+                    if grid[monster.row+1][monster.column].passable:
+                        if not grid[monster.row+1][monster.column].occupied:
+                            grid[monster.row][monster.column].occupied = False                        
+                            self.screen.canvas.move(monster.sprite,0,g)
+                            monster.row+=1
+                            grid[monster.row][monster.column].occupied = True
+                            not_moved=False
+                        elif ( self.tux.row == monster.row+1 and 
+                               self.tux.column == monster.column):
+                            not_moved=False
+                            self.tux.hit(1)
+                        else:
+                            print "failure"
 
-        c = self.screen.canvas
-
-        p=c.coords(self.tux.sprite)
-
-        current_row = int((p[1]-4)/g)
-        current_column = int((p[0]-4)/g)
-        max_row = int(h/g)-1
-        max_column = int(w/g)-1
-
-        # o = string.Template('In {x:$column, y:$row}').substitute({
-        #     'column':current_column, 
-        #     'row': current_row
-        #     })
-        # print o
-
-        if event.keycode == 8320768: 
-            if current_row > 0:
-                # o = string.Template('Moving to: {x:$column, y:$row}').substitute({
-                #     'column':current_column, 
-                #     'row': current_row-1
-                #     })
-                # print o
-                # print self.screen.grid[current_row-1][current_column].square_type
-
-                if self.screen.grid[current_row-1][current_column].passable:
-                    self.screen.canvas.move(self.tux.sprite,0,-g)
-        elif event.keycode == 8255233: 
-            if current_row < max_row:
-                if self.screen.grid[current_row+1][current_column].passable:
-                    self.screen.canvas.move(self.tux.sprite,0,g)
-        elif event.keycode == 8124162: 
-            if current_column > 0:
-                if self.screen.grid[current_row][current_column-1].passable:
-                    self.screen.canvas.move(self.tux.sprite,-g,0)
-        elif event.keycode == 8189699: 
-            if current_column < max_column:
-                if self.screen.grid[current_row][current_column+1].passable:
-                    self.screen.canvas.move(self.tux.sprite,g,0)
-        elif event.keycode == 262248:
-            print "harvest"
-        else:
-            print event.keycode
+                elif d_y > 0:
+                    if grid[monster.row-1][monster.column].passable:
+                        if not grid[monster.row-1][monster.column].occupied:
+                            grid[monster.row][monster.column].occupied = False
+                            self.screen.canvas.move(monster.sprite,0,-g)
+                            monster.row-=1
+                            grid[monster.row][monster.column].occupied = True
+                            not_moved=False
+                        elif ( self.tux.row == monster.row-1 and 
+                               self.tux.column == monster.column):
+                            not_moved=False
+                            self.tux.hit(1)
+                        else:
+                            print "failure"
+            if not_moved:
+                if d_x < 0:
+                    if grid[monster.row][monster.column+1].passable:
+                        if not grid[monster.row][monster.column+1].occupied:
+                            grid[monster.row][monster.column].occupied = False
+                            self.screen.canvas.move(monster.sprite,g,0)
+                            monster.column+=1
+                            grid[monster.row][monster.column].occupied = True
+                            not_moved=False
+                        elif ( self.tux.row == monster.row and 
+                            self.tux.column == monster.column + 1):
+                            self.tux.hit(1)
+                            not_moved=False
+                        else:
+                            print "failure"
+                elif d_x > 0:
+                    if grid[monster.row][monster.column-1].passable:
+                        if not grid[monster.row][monster.column-1].occupied:
+                            grid[monster.row][monster.column].occupied = False
+                            self.screen.canvas.move(monster.sprite,-g,0)
+                            monster.column-=1
+                            grid[monster.row][monster.column].occupied = True
+                            not_moved=False
+                        elif ( self.tux.row == monster.row and 
+                            self.tux.column == monster.column - 1):
+                            self.tux.hit(1)
+                            not_moved=False
+                        else:
+                            print "failure"
 
     def addSprites(self):
         self.tux = sprites.Sprite(self)
         self.screen.monsters=[]
+        m = self.screen.monsters
+        
         for i in range(0,10):
-            self.screen.monsters.append(sprites.Monster(self))
+            m.append(sprites.Monster(self))
+            l = len(m)
+            l-=1
+            m[l].ind = l
+
         sprites.Trees(self)
 
     def display_inventory(self):
         self.inventory = {
             "wood": {"display": "Wood", "qty" : 1},
-            "spears":{"display": "Spears", "qty": 10}
+            "spears":{"display": "Spears", "qty": 10},
+            "fish":{"display": "Fish", "qty": 4},
             }
+        self.update_inventory()
+
+    def update_inventory(self):
         si=self.inventory
-        row=0;
+        row=1;
         for key in self.inventory:    
             si[key]["s"]=StringVar()
             si[key]["s"].set(self.inventory[key]["qty"])
@@ -114,6 +151,8 @@ class Application(Frame):
             si[key]["l1"].grid(row=row, column=0, sticky="we")
             si[key]["l2"].grid(row=row, column=1, sticky="we")
             row+=1
+        if si["fish"]["qty"] <= 0:
+            print "Dieded"
 
     def createWidgets(self):
         global root
@@ -127,6 +166,9 @@ class Application(Frame):
         self.display_inventory()
         self.frame2.pack(fill=BOTH, expand=1, side="right")
 
+        self.craft_button = Button(self.frame2, text="craft")
+        self.craft_button.grid(row=0, column=0, sticky="we")
+        self.craft_button["command"]=self.craft.create_window
 
         self.screen.canvas.focus_set()
         self.screen.canvas.bind("<Key>", self.keypress)
@@ -143,13 +185,24 @@ class Application(Frame):
         self.popup.add_command(label="Make Water", command=self.make_water)
 
     def __init__(self, master=None):
+        self.master=master
+        self.counter=0
+        self.root = root
+
+        self.craft = craft.Craft(app=self)
+
         Frame.__init__(self, master)
+        # self.keypress = on_keypress
         self.pack()
         self.createWidgets()
         self.create_popups()
+        # master.after(1, lambda: master.focus_force())
+
         # self.animate()
 
 root = Tk()
+root.focus_force()
+root.tkraise()
 app = Application(master=root)
 app.mainloop()
 try: 

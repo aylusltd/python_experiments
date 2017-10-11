@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import random
 import constants
 import deck
@@ -57,10 +58,10 @@ def displayHand(hand, display=True):
         handScore+=card["value"]
         if card["value"]==1:
             AceCount+=1
-        while AceCount > 0:
-            if handScore < 11:
-                handScore+=10
-            AceCount-=1
+    while AceCount > 0:
+        if handScore < 11:
+            handScore+=10
+        AceCount-=1
     if display:
         print handString
         print handScore

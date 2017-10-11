@@ -3,8 +3,11 @@ from Tkinter import *
 import random
 import string
 from PIL import Image, ImageTk
+from os.path import isfile, join, realpath, abspath, dirname
+from imp import load_source
 
-    
+mypath = dirname(__file__)
+Spear = load_source('Spear', mypath+'/sprites/spear.py').Spear
 
 class Square(constants.correction):
     def debug_click(self, event):
@@ -32,26 +35,24 @@ class Square(constants.correction):
                 ((column+1)*g)+5, 
                 ((row+1)*g)+5,
                 fill=fill)
-            self.canvas.bind("<Button-1>", self.debug_click)
+            # self.canvas.bind("<Button-1>", self.debug_click)
             self.canvas.bind("<Control-Button-1>", app.edit_square)
         self.square_type = square_type
         self.row=row
         self.column=column
         self.app = app
         self.occupied=False
+        self.has_tree = False
+        self.has_tux = False
 
 class Sprite(constants.correction):
     def __init__(self,app):
-        constants.l('test',{})
         h = constants.bounds["y"][1]
         w = constants.bounds["x"][1]
         g = constants.grid_size
         cx = w/(2*g)
         cy = h/(2*g)
         img = Image.open("sprites/sm_tux.gif")
-
-        # self.p= PhotoImage(file="sprites/tux.gif")
-        # img.thumbnail((g,g))
         self.p_sprite = ImageTk.PhotoImage(img)
         self.row=cy
         self.column=cx
@@ -59,10 +60,8 @@ class Sprite(constants.correction):
 
         s=app.screen.grid[cy][cx]
         tries=0
-        # s.square_type='water'
-        # s.passable=False
         while (s.square_type != 'grass') and (tries < 20):
-            constants.l('Moving from {x:$x, y:$y}', {'x':cx,'y':cy})
+            # constants.l('Moving from {x:$x, y:$y}', {'x':cx,'y':cy})
             if cx>0:
                 cx-=1
             else:
@@ -76,10 +75,21 @@ class Sprite(constants.correction):
 
         self.sprite = app.screen.canvas.create_image(((cx+0.5)*g)+5, ((cy+0.5)*g)+5, image=self.p_sprite)
         app.screen.grid[cy][cx].occupied=True
+        app.screen.grid[cy][cx].has_tux=True
+        self.app = app
+
+    def hit(self,damage):
+        print "Hit"
+        fish = self.app.inventory["fish"]["qty"]
+        if fish >= damage:
+            self.app.inventory["fish"]["qty"]-=damage
+            self.app.update_inventory()
+        else:
+            print "Oh No"
 
 class Monster(constants.correction):
     def __init__(self,app):
-        constants.l('Placing Monster',{})
+        # constants.l('Placing Monster',{})
         h = constants.bounds["y"][1]
         w = constants.bounds["x"][1]
         g = constants.grid_size
@@ -87,19 +97,12 @@ class Monster(constants.correction):
         cy = h/(2*g)
         img = Image.open("sprites/sm_monster.gif")
 
-        # self.m= PhotoImage(file="sprites/monster.gif")
-        # img.thumbnail((g,g))
         self.m_sprite = ImageTk.PhotoImage(img)
-        self.row=cy
-        self.column=cx
         original_cx = cx
-
         s=app.screen.grid[cy][cx]
         tries=0
-        # s.square_type='water'
-        # s.passable=False
         while (s.passable is False or s.occupied is True) and (tries < 20):
-            constants.l('Moving from {x:$x, y:$y}', {'x':cx,'y':cy})
+            # constants.l('Moving from {x:$x, y:$y}', {'x':cx,'y':cy})
             if cx<(w/g)-2:
                 cx+=1
             else:
@@ -109,15 +112,25 @@ class Monster(constants.correction):
             s=app.screen.grid[cy][cx]
 
         self.sprite = app.screen.canvas.create_image(((cx+0.5)*g)+5, ((cy+0.5)*g)+5, image=self.m_sprite)
+        self.row=cy
+        self.column=cx
         app.screen.grid[cy][cx].occupied=True
+        self.app = app
+    def destroy(self):
+        self.app.screen.canvas.delete(self.sprite)
+        self.app.screen.grid[self.row][self.column].occupied = False
+        self.app.screen.monsters.remove(self)
+    
+    # def __del__(self):
+    #     print "deleting monster"
+    #     print self.row
+    #     print self.column
 
 def Trees(app):
-    constants.l('Placing Trees',{})
     h = constants.bounds["y"][1]
     w = constants.bounds["x"][1]
     g = constants.grid_size
-    img = Image.open("sprites/sm_tree.gif")
-    # app.t= PhotoImage(file="sprites/tree.gif")
+    img = Image.open("sprites/sm_lily_tree.gif")
     img.thumbnail((g,g))
     app.t_sprite = ImageTk.PhotoImage(img)
 
@@ -127,8 +140,6 @@ def Trees(app):
             if (t and s.square_type == "grass" and not s.occupied):
                 s.tree_sprite = app.screen.canvas.create_image(((s.column+0.5)*g)+5, ((s.row+0.5)*g)+5, image=app.t_sprite)                    
                 s.has_tree=True
-
-
 
 class Screen(constants.correction):
     def __init__(self,app, height=constants.bounds["y"][1], width=constants.bounds["x"][1], grid=constants.grid_size):
@@ -148,7 +159,13 @@ class Screen(constants.correction):
                     square_type = 'grass'
                 s = Square(i,j, self.canvas, app=app, square_type=square_type)
                 self.grid[i].append(s)
-
+    def save(self):
+        arr = []
+        for row in self.grid:
+            save_row = []
+            for square in row:
+                save_row.append()
+            arr.append(save_row)
 
 class Map(constants.correction):
     def __init__(self, screens_height, screens_width):

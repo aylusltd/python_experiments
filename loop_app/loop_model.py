@@ -2,22 +2,28 @@ import threading
 import time
 import sys
 from getch import getch
-from web import serve_forever
+from web import serve_forever, close_socket
 
 
 run = True
 state = {
-    "controlCharacter"  : False
+    "controlCharacter"  : False,
+    "exit" : 0
 }
 streams = {}
-
+master_listeners = []
 
 
 class listener(threading.Thread):
-    def __init__(self, stream, buffer_filler, freq = 0.5):
+    def __init__(self, stream, buffer_filler, freq = 0.5, destroy = None):
+        if destroy is None:
+            print stream + " has no destroy"
+        else:
+            print stream + " has destroy"
         self.input_stream=buffer_filler
         self.stream_name = stream
         self.freq = freq
+        self.destroy = destroy
         print "listener initialized"
         threading.Thread.__init__(self)
         self.start()
@@ -33,17 +39,23 @@ class listener(threading.Thread):
                     if buffer:
                         buffer=listener(buffer)
             time.sleep(self.freq)
+        for l in master_listeners:
+            if l.destroy is not None:
+                try:
+                    l.destroy()
+                except:
+                    print "already dead"
 
-def create_stream(name, loop_listener, freq = 0.5):
+def create_stream(name, loop_listener, freq = 0.5, destroy=None):
     global streams
     streams[name]=[]
-    listener(name, loop_listener, freq)
+    master_listeners.append(listener(name, loop_listener, freq, destroy=destroy))
 
 def addEventListener(stream, func):
     streams[stream].append(func)
     print stream + " updated. Added " + func.__name__ + "."
 
-def event_listener(stream):
+def event_listener(stream, key=None):
     def faux_wrapper(l):
         def wrapper(*args, **kwargs):
             ch = args[0]
@@ -53,36 +65,30 @@ def event_listener(stream):
                 run = False
                 state['exit'] = 0
                 return None
-            else:
+            elif key is None or ch == key:
                 return l(*args, **kwargs)
+            else:
+                return ch
         addEventListener(stream, wrapper)
         return wrapper
     return faux_wrapper
 
 
+
 create_stream("keyboard", getch, freq = 0.01)
-create_stream("8888", serve_forever, freq = 0.01)
+create_stream("8888", serve_forever, freq = 0.01, destroy=close_socket)
 
-@event_listener(stream="keyboard")
+@event_listener(stream="keyboard", key="g")
 def g(ch):
-    if ch == "g":
-        print "you pressed g"
-        return None
-    return ch
+    print "you pressed g"
 
-@event_listener(stream="keyboard")
+@event_listener(stream="keyboard", key="f")
 def f(ch):
-    if ch == "f":
-        print "you pressed f"
-        return None
-    return ch
+    print "you pressed f"
 
-@event_listener(stream="keyboard")
+@event_listener(stream="keyboard", key="a")
 def a(ch):
-    if ch == "a":
-        print "you pressed a"
-        return None
-    return ch
+    print "you pressed a"
 
 @event_listener(stream="keyboard")
 def arrows(k):

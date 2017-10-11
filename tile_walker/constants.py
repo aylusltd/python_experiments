@@ -10,7 +10,8 @@ class correction():
     def __contains__(self, name):
         return hasattr(self, name)
 
-grid_size=40
+grid_size = 40
+INTERVAL  = 20
 
 bounds = {
     "x": [0,1000],
