@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import sys
 import csv
+import json
 
 try:
     f = sys.argv[1]
@@ -14,11 +15,17 @@ TTFB_V=[]
 a_minus_b = []
 a_minus_b_v = []
 
-with open(f) as csv_file:
-    reader = csv.DictReader(csv_file)
-    for row in reader:
-        TTFA.append(float(row["time to first ad"])/1000)
-        TTFB.append(float(row["TTFB"])/1000)
+# with open(f) as csv_file:
+#     reader = csv.DictReader(csv_file)
+#     for row in reader:
+#         TTFA.append(float(row["time to first ad"])/1000)
+#         TTFB.append(float(row["TTFB"])/1000)
+
+with open(f) as JSON_file:
+    obj = json.load(JSON_file)
+    for count in range(1,51):
+        TTFA.append(float(obj["data"]["runs"][str(count)]["firstView"]["time to first ad"])/1000)
+        TTFB.append(float(obj["data"]["runs"][str(count)]["firstView"]["TTFB"])/1000)
 
 for i, time in enumerate(TTFA):
     a_minus_b.append(time - TTFB[i])
