@@ -141,6 +141,21 @@ def Trees(app):
                 s.tree_sprite = app.screen.canvas.create_image(((s.column+0.5)*g)+5, ((s.row+0.5)*g)+5, image=app.t_sprite)                    
                 s.has_tree=True
 
+def Rocks(app):
+    h = constants.bounds["y"][1]
+    w = constants.bounds["x"][1]
+    g = constants.grid_size
+    img = Image.open("sprites/sm_rock.gif")
+    img.thumbnail((g,g))
+    app.r_sprite = ImageTk.PhotoImage(img)
+
+    for row in app.screen.grid:
+        for s in row:
+            t=random.randint(0,12)%6 == 0
+            if (t and s.square_type == "grass" and not s.occupied):
+                s.rock_sprite = app.screen.canvas.create_image(((s.column+0.5)*g)+5, ((s.row+0.5)*g)+5, image=app.r_sprite)                    
+                s.has_rock=True
+
 class Screen(constants.correction):
     def __init__(self,app, height=constants.bounds["y"][1], width=constants.bounds["x"][1], grid=constants.grid_size):
         h=height
@@ -153,12 +168,23 @@ class Screen(constants.correction):
             # print app.grid[i]
             for j in range(0,(w/g)):
                 r = random.randint(0,12)
-                if r%4 == 0:
+                if r%11 == 0:
+                    square_type = 'water'
+                elif r%4 ==0 and self.neighbor_water(i,j):
                     square_type = 'water'
                 else:
                     square_type = 'grass'
                 s = Square(i,j, self.canvas, app=app, square_type=square_type)
                 self.grid[i].append(s)
+    def neighbor_water(self, i,j):
+        for x in range(-1,1):
+            for y in range(-1,1):
+                try:
+                    if self.grid[i+y][j+x].square_type == 'water':
+                        return True
+                except IndexError:
+                    pass
+
     def save(self):
         arr = []
         for row in self.grid:

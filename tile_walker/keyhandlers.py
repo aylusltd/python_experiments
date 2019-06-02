@@ -80,16 +80,48 @@ def harvest(s,e):
         s.inventory["wood"]["qty"]+=10
         g[r][c].has_tree=False
         s.screen.canvas.delete(g[r][c].tree_sprite)
+    elif g[r][c].has_rock:
+        s.inventory["rock"]["qty"]+=10
+        g[r][c].has_rock=False
+        s.screen.canvas.delete(g[r][c].rock_sprite)
     s.update_inventory()    
     print "harvest"
 
 @key_listener(key="r")
-def harvest(s,e):
-    if s.inventory["wood"]["qty"] >=1:
-        s.inventory["wood"]["qty"]-=1
-        s.inventory["spears"]["qty"]+=1
+def craft_spear(s,e):
+    key = "spears"
+    ingredients = ["wood", "rock"]
+    inventory = s.inventory
+    if has_ingredients(ingredients, inventory):
+        consume_ingredients(ingredients, inventory)
+        inventory[key]["qty"]+=1
     s.update_inventory()    
-    print "craft"
+    print "craft spear"
+
+@key_listener(key="b")
+def craft_brick(s,e):
+    key = "brick"
+    ingredients = ["rock", "rock"]
+    inventory = s.inventory
+    if has_ingredients(ingredients, inventory):
+        consume_ingredients(ingredients, inventory)
+        inventory[key]["qty"]+=1
+    s.update_inventory()    
+    print "craft brick"
+
+def has_ingredients(ingredients, inventory):
+    t={}
+    for i in inventory:
+        t[i]=inventory[i]["qty"]
+    for ingredient in ingredients:
+        if t[ingredient] < 1:
+            return False
+        t[ingredient]-=1
+    return True
+
+def consume_ingredients(ingredients, inventory):
+    for ingredient in ingredients:
+        inventory[ingredient]["qty"]-=1
 
 
 @key_listener(keycode=8320768)
@@ -146,4 +178,4 @@ def on_keypress(s, event):
     for l in listeners:
             l(s,event)
     s.screen.grid[s.tux.row][s.tux.column].occupied = True
-    s.root.after(constants.INTERVAL*2, s.monsters_move)
+    # s.root.after(constants.INTERVAL*2, s.monsters_move)

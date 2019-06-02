@@ -6,6 +6,7 @@ import sprites
 import string
 from keyhandlers import on_keypress
 import craft
+from starting_inventory import starting_inventory
 
 class Application(Frame):
     g=constants.grid_size
@@ -46,7 +47,7 @@ class Application(Frame):
             self.popup.grab_release()
 
     def keypress(self, event):
-        on_keypress(self,event)
+        on_keypress(self, event)
 
     def monsters_move(self):
         g = constants.grid_size
@@ -118,6 +119,7 @@ class Application(Frame):
                             not_moved=False
                         else:
                             print "failure"
+        self.root.after(constants.INTERVAL * 25, self.monsters_move)
 
     def addSprites(self):
         self.tux = sprites.Sprite(self)
@@ -129,15 +131,12 @@ class Application(Frame):
             l = len(m)
             l-=1
             m[l].ind = l
-
+        # Consumables added here
+        sprites.Rocks(self)
         sprites.Trees(self)
 
     def display_inventory(self):
-        self.inventory = {
-            "wood": {"display": "Wood", "qty" : 1},
-            "spears":{"display": "Spears", "qty": 10},
-            "fish":{"display": "Fish", "qty": 4},
-            }
+        self.inventory = starting_inventory
         self.update_inventory()
 
     def update_inventory(self):
@@ -196,6 +195,7 @@ class Application(Frame):
         self.pack()
         self.createWidgets()
         self.create_popups()
+        self.root.after(constants.INTERVAL * 25, self.monsters_move)
         # master.after(1, lambda: master.focus_force())
 
         # self.animate()
