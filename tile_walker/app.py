@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/bin/python
 from Tkinter import *
 from PIL import Image, ImageTk
 import constants
@@ -7,39 +7,89 @@ import string
 from keyhandlers import on_keypress
 import craft
 from starting_inventory import starting_inventory
+import maps
+
+MAKE_MONSTERS = True
+MAKE_FISH = True
+# MAKE_MONSTERS = False
 
 class Application(Frame):
     g=constants.grid_size
     selected_square=None
     spears = []
+    def save(self):
+        maps.save(app=self)
+        pass
+    def load(self):
+        maps.load(app=self)
+        pass
+
+    def make_monster(self):
+        s = self.selected_square
+        x = s.column
+        y = s.row
+        m = self.screen.monsters
+        monster = sprites.Monster(self, x=x, y=y)
+        if monster.placed: 
+            m.append(monster)
+            l = len(m) - 1
+            m[l].ind = l
+
+    def make_fish(self):
+        s = self.selected_square
+        x = s.column
+        y = s.row
+        f = self.screen.fishes
+        fish = sprites.Fish(self, x=x, y=y)
+        if fish.placed: 
+            f.append(fish)
+            l = len(f) - 1
+            f[l].ind = l
+
+    def make_rocks(self):
+        s = self.selected_square
+        s.add_feature("rock", self)
+
+    def make_trees(self):
+        s = self.selected_square
+        s.add_feature("tree", self)
+
     def make_water(self):
         s=self.selected_square
         s.passable=False
         s.square_type='water'
         self.screen.canvas.itemconfig(s.representation, fill='blue')
         self.selected_square=None
+
     def make_grass(self):
         s=self.selected_square
         s.passable=True
         s.square_type='grass'
         self.screen.canvas.itemconfig(s.representation, fill='green')
         self.selected_square=None
+
     def edit_square(self, event):
         row = int(event.y/constants.grid_size)
         column = int(event.x/constants.grid_size)
-        o = string.Template('Right Clicked {x:$column, y:$row}').substitute({'column':column, 'row': row})
-        print o
+        # o = string.Template('Right Clicked {x:$column, y:$row}').substitute({'column':column, 'row': row})
+        # print o
         ss = self.screen
         s = ss.grid[row][column]
         self.selected_square = s
-        print s.square_type
+        grass_only = ["Make Monster", "Make Trees", "Make Rocks", "Make Water"]
+        water_only = ["Make Grass", "Make Fish"]
+        # print s.square_type
         if s.square_type == 'grass':
-            self.popup.entryconfig('Make Grass', state='disabled')
-            self.popup.entryconfig('Make Water', state='normal')
+            for g in grass_only:
+                self.popup.entryconfig(g, state='normal')
+            for w in water_only:
+                self.popup.entryconfig(w, state='disabled')
         elif s.square_type == 'water':
-            self.popup.entryconfig('Make Water', state='disabled')
-            self.popup.entryconfig('Make Grass', state='normal')
-        print s.passable
+            for g in grass_only:
+                self.popup.entryconfig(g, state='disabled')
+            for w in water_only:
+                self.popup.entryconfig(w, state='normal')
+        # print s.passable
         try:
             self.popup.tk_popup(event.x_root, event.y_root, 0)
         finally:
@@ -52,6 +102,9 @@ class Application(Frame):
     def monsters_move(self):
         g = constants.grid_size
         # c=0
+        for fish in self.screen.fishes:
+            fish.moved = False
+            fish.move(app=self)
 
         for monster in self.screen.monsters:
             # c+=1
@@ -74,7 +127,8 @@ class Application(Frame):
                             not_moved=False
                             self.tux.hit(1)
                         else:
-                            print "failure"
+                            # print "failure"
+                            pass
 
                 elif d_y > 0:
                     if grid[monster.row-1][monster.column].passable:
@@ -89,7 +143,8 @@ class Application(Frame):
                             not_moved=False
                             self.tux.hit(1)
                         else:
-                            print "failure"
+                            # print "failure"
+                            pass
             if not_moved:
                 if d_x < 0:
                     if grid[monster.row][monster.column+1].passable:
@@ -122,15 +177,26 @@ class Application(Frame):
         self.root.after(constants.INTERVAL * 25, self.monsters_move)
 
     def addSprites(self):
+        global MAKE_MONSTERS
         self.tux = sprites.Sprite(self)
         self.screen.monsters=[]
+        self.screen.fishes=[]
         m = self.screen.monsters
-        
-        for i in range(0,10):
-            m.append(sprites.Monster(self))
-            l = len(m)
-            l-=1
-            m[l].ind = l
+        f = self.screen.fishes
+        if MAKE_MONSTERS:
+            for i in range(0,10):
+                monster = sprites.Monster(self)
+                if monster.placed: 
+                    m.append(monster)
+                    l = len(m) - 1
+                    m[l].ind = l
+        if MAKE_FISH:
+            for i in range(0,10):
+                fish = sprites.Fish(self)
+                if fish.placed: 
+                    f.append(fish)
+                    l = len(f) - 1
+                    f[l].ind = l
         # Consumables added here
         sprites.Rocks(self)
         sprites.Trees(self)
@@ -171,22 +237,23 @@ class Application(Frame):
 
         self.screen.canvas.focus_set()
         self.screen.canvas.bind("<Key>", self.keypress)
-        # menubar = Menu(root)
-        # filemenu = Menu(menubar, tearoff=0)
-        # filemenu.add_command(label="Bigger", command=self.make_balls_bigger)
-        # filemenu.add_command(label="Smaller", command=self.make_balls_smaller)
-        # menubar.add_cascade(label="Size", menu=filemenu)
-        # root.config(menu=menubar)
 
     def create_popups(self):
         self.popup = Menu(root, tearoff=0)
         self.popup.add_command(label="Make Grass", command=self.make_grass) # , command=next) etc...
         self.popup.add_command(label="Make Water", command=self.make_water)
+        self.popup.add_separator()
+        self.popup.add_command(label="Make Monster", command=self.make_monster)
+        self.popup.add_command(label="Make Rocks", command=self.make_rocks)
+        self.popup.add_command(label="Make Trees", command=self.make_trees)
+        self.popup.add_command(label="Make Fish", command=self.make_fish)
 
     def __init__(self, master=None):
         self.master=master
         self.counter=0
         self.root = root
+        self.sprites = {}
+        self.action=None
 
         self.craft = craft.Craft(app=self)
 
@@ -199,6 +266,17 @@ class Application(Frame):
         # master.after(1, lambda: master.focus_force())
 
         # self.animate()
+        menubar = Menu(root)
+
+        # create a pulldown menu, and add it to the menu bar
+        filemenu = Menu(menubar, tearoff=0)
+        filemenu.add_command(label="Open", command=self.load)
+        filemenu.add_command(label="Save", command=self.save)
+        filemenu.add_separator()
+        filemenu.add_command(label="Exit", command=root.quit)
+        menubar.add_cascade(label="File", menu=filemenu)
+        root.config(menu=menubar)
+
 
 root = Tk()
 root.focus_force()

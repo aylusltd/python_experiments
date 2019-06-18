@@ -9,7 +9,10 @@ fish:
   qty: 4
 rock: 
   display: Rock
-  qty: 1
+  qty: 2
 brick:
   display: Bricks
   qty: 0
+wall:
+  display: Wall
+  qty: 3

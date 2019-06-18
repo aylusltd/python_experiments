@@ -9,11 +9,11 @@ print mypath
 constants = load_source('constants', mypath+'/../constants.py')
 g = constants.grid_size
 
-onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f)) and "rock.gif" in f and "sm_" not in f]
+onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f)) and "fish.gif" in f and "sm_" not in f]
 
 for img in onlyfiles:
     full_path = join(mypath,img)
     i = Image.open(full_path)
-    i.thumbnail((2*g,2*g))
-    i=i.resize((2*g,2*g), Image.ANTIALIAS)
+    i.thumbnail((g,g))
+    i=i.resize((g,g), Image.ANTIALIAS)
     i.save(join(mypath,"sm_"+img))

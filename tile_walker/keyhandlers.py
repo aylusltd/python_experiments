@@ -44,16 +44,16 @@ def spear_left(s,e):
     y = s.tux.row
     x = s.tux.column
     s = sprites.Spear(s, d=90, x=x, y=y)
-    print "spear_left"
+    # print "spear_left"
 
 @key_listener(key="d")
 @spear_check
 def spear_right(s,e):
-    print "spear_right"
+    # print "spear_right"
     y = s.tux.row
     x = s.tux.column
     s = sprites.Spear(s, d=270, x=x, y=y)
-    print "spear_right"
+    # print "spear_right"
 
 @key_listener(key="w")
 @spear_check
@@ -61,7 +61,7 @@ def spear_up(s,e):
     y = s.tux.row
     x = s.tux.column
     s = sprites.Spear(s, d=0, x=x, y=y)
-    print "spear_up"
+    # print "spear_up"
 
 @key_listener(key="x")
 @spear_check
@@ -69,7 +69,7 @@ def spear_down(s,e):
     y = s.tux.row
     x = s.tux.column
     s = sprites.Spear(s, d=180, x=x, y=y)
-    print "spear_down"
+    # print "spear_down"
 
 @key_listener(key="h")
 def harvest(s,e):
@@ -79,13 +79,13 @@ def harvest(s,e):
     if g[r][c].has_tree:
         s.inventory["wood"]["qty"]+=10
         g[r][c].has_tree=False
-        s.screen.canvas.delete(g[r][c].tree_sprite)
+        s.screen.canvas.delete(g[r][c].sprites["tree_sprite"])
     elif g[r][c].has_rock:
         s.inventory["rock"]["qty"]+=10
         g[r][c].has_rock=False
-        s.screen.canvas.delete(g[r][c].rock_sprite)
+        s.screen.canvas.delete(g[r][c].sprites["rock_sprite"])
     s.update_inventory()    
-    print "harvest"
+    # print "harvest"
 
 @key_listener(key="r")
 def craft_spear(s,e):
@@ -96,7 +96,7 @@ def craft_spear(s,e):
         consume_ingredients(ingredients, inventory)
         inventory[key]["qty"]+=1
     s.update_inventory()    
-    print "craft spear"
+    # print "craft spear"
 
 @key_listener(key="b")
 def craft_brick(s,e):
@@ -107,7 +107,62 @@ def craft_brick(s,e):
         consume_ingredients(ingredients, inventory)
         inventory[key]["qty"]+=1
     s.update_inventory()    
-    print "craft brick"
+    # print "craft brick"
+
+@key_listener(key="l")
+def craft_wall(s,e):
+    key = "wall"
+    ingredients = ["brick", "brick", "brick", "brick", "brick"]
+    inventory = s.inventory
+    if has_ingredients(ingredients, inventory):
+        consume_ingredients(ingredients, inventory)
+        inventory[key]["qty"]+=1
+    s.update_inventory()    
+    # print "craft wall"
+@key_listener(key="p")
+def place_wall(s,e):
+    key = "wall"
+    ingredients = ["wall"]
+    inventory = s.inventory
+    r = s.tux.row
+    c = s.tux.column
+    g = s.screen.grid
+    square = g[r][c]
+    if has_ingredients(ingredients, inventory):
+        consume_ingredients(ingredients, inventory)
+        square.add_feature(feature="wall", app=s, passable=False)
+        s.update_inventory()
+    # print "place wall"
+@key_listener(key="z")
+def destroy_wall(s,e):
+    key = "wall"
+    ingredients = ["wall"]
+    inventory = s.inventory
+    screen = s.screen
+    r = s.tux.row
+    c = s.tux.column
+    g = s.screen.grid
+    square = g[r][c]
+    touching_wall = screen.neighbor_has(feature=key, i=r, j=c)
+    if touching_wall:
+        s.action = "destroy wall"
+    # print "destroying wall"
+
+@key_listener(key="f")
+def catch_fish(s,e):
+    key = "fish"
+    # ingredients = ["fish"]
+    # inventory = s.inventory
+    # s.config(cursor='circle red red')
+    screen = s.screen
+    r = s.tux.row
+    c = s.tux.column
+    g = s.screen.grid
+    square = g[r][c]
+    touching_wall = screen.neighbor_has(feature=key, i=r, j=c)
+    if touching_wall:
+        s.action = "catch fish"
+    # print "destroying wall"
 
 def has_ingredients(ingredients, inventory):
     t={}

@@ -8,45 +8,12 @@ from imp import load_source
 
 mypath = dirname(__file__)
 Spear = load_source('Spear', mypath+'/sprites/spear.py').Spear
+Square = load_source('Square', mypath+'/Classes/Square.py').Square
+Fish = load_source('Fish', mypath+'/sprites/Fish.py').Fish
 
-class Square(constants.correction):
-    def debug_click(self, event):
-        row = int(event.y/constants.grid_size)
-        column = int(event.x/constants.grid_size)
-        o = string.Template('Clicked {x:$column, y:$row}').substitute({'column':column, 'row': row})
-        print o
-        s = self.app.screen.grid[row][column]
-        print "Type: " + s.square_type
-        print "Passable: " +str(s.passable)
-        print "Occupied: " + str(s.occupied)
-
-    def __init__(self, row, column, canvas, app, g=constants.grid_size, square_type='grass'):
-        if canvas is not None:
-            self.canvas = canvas
-            if square_type == 'grass':
-                fill='green'
-                self.passable=True
-            elif square_type == 'water':
-                fill='blue'
-                self.passable = False
-            self.representation = canvas.create_rectangle(
-                (column*g)+5, 
-                (row*g)+5, 
-                ((column+1)*g)+5, 
-                ((row+1)*g)+5,
-                fill=fill)
-            # self.canvas.bind("<Button-1>", self.debug_click)
-            self.canvas.bind("<Control-Button-1>", app.edit_square)
-        self.square_type = square_type
-        self.row=row
-        self.column=column
-        self.app = app
-        self.occupied=False
-        self.has_tree = False
-        self.has_tux = False
 
 class Sprite(constants.correction):
-    def __init__(self,app):
+    def __init__(self,app, x=None, y=None):
         h = constants.bounds["y"][1]
         w = constants.bounds["x"][1]
         g = constants.grid_size
@@ -60,17 +27,21 @@ class Sprite(constants.correction):
 
         s=app.screen.grid[cy][cx]
         tries=0
-        while (s.square_type != 'grass') and (tries < 20):
-            # constants.l('Moving from {x:$x, y:$y}', {'x':cx,'y':cy})
-            if cx>0:
-                cx-=1
-            else:
-                cx=original_cx
-                cy-=1
-            tries+=1
-            s=app.screen.grid[cy][cx]
-        if tries == 20:
-            app.screen=Screen(app)
+        if (x is None) or (y is None):
+            while (s.square_type != 'grass') and (tries < 20):
+                # constants.l('Moving from {x:$x, y:$y}', {'x':cx,'y':cy})
+                if cx>0:
+                    cx-=1
+                else:
+                    cx=original_cx
+                    cy-=1
+                tries+=1
+                s=app.screen.grid[cy][cx]
+            if tries == 20:
+                app.screen=Screen(app)
+        else:
+            cx = x
+            cy = y
 
 
         self.sprite = app.screen.canvas.create_image(((cx+0.5)*g)+5, ((cy+0.5)*g)+5, image=self.p_sprite)
@@ -88,7 +59,7 @@ class Sprite(constants.correction):
             print "Oh No"
 
 class Monster(constants.correction):
-    def __init__(self,app):
+    def __init__(self,app, x=None, y=None):
         # constants.l('Placing Monster',{})
         h = constants.bounds["y"][1]
         w = constants.bounds["x"][1]
@@ -101,21 +72,33 @@ class Monster(constants.correction):
         original_cx = cx
         s=app.screen.grid[cy][cx]
         tries=0
-        while (s.passable is False or s.occupied is True) and (tries < 20):
-            # constants.l('Moving from {x:$x, y:$y}', {'x':cx,'y':cy})
-            if cx<(w/g)-2:
-                cx+=1
-            else:
-                cx=original_cx
-                cy+=1
-            tries+=1
-            s=app.screen.grid[cy][cx]
+        MAX_TRIES = 30
+        if (x is None) or (y is None):
+            while (s.passable is False or s.occupied is True) and (tries < MAX_TRIES):
+                # constants.l('Moving from {x:$x, y:$y}', {'x':cx,'y':cy})
+                if cx<(w/g)-2:
+                    cx+=random.randint(0,2)
+                # else:
+                    # cx=original_cx
+                    cy+=random.randint(-2,2)
+                tries+=1
+                s=app.screen.grid[cy][cx]
 
-        self.sprite = app.screen.canvas.create_image(((cx+0.5)*g)+5, ((cy+0.5)*g)+5, image=self.m_sprite)
-        self.row=cy
-        self.column=cx
-        app.screen.grid[cy][cx].occupied=True
-        self.app = app
+        else:
+            cx = x
+            cy = y
+        if tries < MAX_TRIES:
+            s=app.screen.grid[cy][cx]
+            self.sprite = app.screen.canvas.create_image(((cx+0.5)*g)+5, ((cy+0.5)*g)+5, image=self.m_sprite)
+            self.row=cy
+            self.column=cx
+            s.occupied=True
+            self.app = app
+            self.type = "virus"
+            self.placed = True
+        else: 
+            print "Tries exceeded"
+            self.placed = False
     def destroy(self):
         self.app.screen.canvas.delete(self.sprite)
         self.app.screen.grid[self.row][self.column].occupied = False
@@ -130,16 +113,18 @@ def Trees(app):
     h = constants.bounds["y"][1]
     w = constants.bounds["x"][1]
     g = constants.grid_size
-    img = Image.open("sprites/sm_lily_tree.gif")
+    img = Image.open("sprites/sm_tree.gif")
     img.thumbnail((g,g))
     app.t_sprite = ImageTk.PhotoImage(img)
 
     for row in app.screen.grid:
         for s in row:
-            t=random.randint(0,12)%3 == 0
-            if (t and s.square_type == "grass" and not s.occupied):
-                s.tree_sprite = app.screen.canvas.create_image(((s.column+0.5)*g)+5, ((s.row+0.5)*g)+5, image=app.t_sprite)                    
-                s.has_tree=True
+            r = random.randint(0,12)
+            start_cluster= r< 3
+            continue_cluster= r < 9
+            neighbor = app.screen.neighbor_has(feature="tree", i=s.row,j=s.column)
+            if ((start_cluster or (continue_cluster and neighbor)) and s.square_type == "grass" and not s.occupied):
+                s.add_feature("tree", app)
 
 def Rocks(app):
     h = constants.bounds["y"][1]
@@ -151,10 +136,14 @@ def Rocks(app):
 
     for row in app.screen.grid:
         for s in row:
-            t=random.randint(0,12)%6 == 0
-            if (t and s.square_type == "grass" and not s.occupied):
-                s.rock_sprite = app.screen.canvas.create_image(((s.column+0.5)*g)+5, ((s.row+0.5)*g)+5, image=app.r_sprite)                    
-                s.has_rock=True
+            r = random.randint(0,12)
+            start_cluster= r== 0
+            continue_cluster= r < 5
+            neighbor = app.screen.neighbor_has(feature="rock", i=s.row,j=s.column)
+            if ((start_cluster or (continue_cluster and neighbor)) and s.square_type == "grass" and not s.occupied):
+                s.add_feature("rock", app)
+                # s.rock_sprite = app.screen.canvas.create_image(((s.column+0.5)*g)+5, ((s.row+0.5)*g)+5, image=app.r_sprite)                    
+                # s.has_rock=True
 
 class Screen(constants.correction):
     def __init__(self,app, height=constants.bounds["y"][1], width=constants.bounds["x"][1], grid=constants.grid_size):
@@ -176,6 +165,31 @@ class Screen(constants.correction):
                     square_type = 'grass'
                 s = Square(i,j, self.canvas, app=app, square_type=square_type)
                 self.grid[i].append(s)
+    
+    def neighbor_has(self, feature, i,j):
+        prop = "has_"+feature
+        # debug_feature = ["wall", "tux"]
+        debug_feature = []
+        # Remember range is broken and checks from min to max - 1
+        for x in range(-1,2):
+            for y in range(-1,2):
+                nx = j+x
+                ny = i+y
+                if feature in debug_feature:
+                    o = string.Template('Checking {x:$column, y:$row}').substitute({'column':nx, 'row': ny})
+                    print o
+                    print prop + ": " + str(self.grid[ny][nx][prop])
+                try:
+                    if self.grid[ny][nx][prop] == True:
+                        if feature in debug_feature:
+                            print "Found neighbor"
+                        return True
+                except IndexError:
+                    if feature in debug_feature:
+                        print "Out of range"
+                    else:
+                        pass
+        return False
     def neighbor_water(self, i,j):
         for x in range(-1,1):
             for y in range(-1,1):
@@ -192,9 +206,4 @@ class Screen(constants.correction):
             for square in row:
                 save_row.append()
             arr.append(save_row)
-
-class Map(constants.correction):
-    def __init__(self, screens_height, screens_width):
-        print "Map"
-
 
